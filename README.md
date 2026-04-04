@@ -1,6 +1,5 @@
 ---
 title: Email Triage Env
-<<<<<<< HEAD
 emoji: 📧
 colorFrom: blue
 colorTo: green
