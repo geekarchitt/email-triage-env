@@ -22,12 +22,13 @@ class StepRequest(BaseModel):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.post("/reset")
-def reset(req: ResetRequest):
-    """Start a new episode. Returns the first observation."""
-    task = req.task or "categorize"
+def reset(req: ResetRequest = None):
+    if req is None:
+        task = "categorize"
+    else:
+        task = req.task or "categorize"
     if task not in ("categorize", "prioritize", "full_triage"):
-        raise HTTPException(status_code=400, detail="Invalid task name")
-    
+        task = "categorize"
     env = EmailTriageEnv(task=task)
     envs[task] = env
     obs = env.reset()
