@@ -1,5 +1,6 @@
 ---
 title: Email Triage Env
+<<<<<<< HEAD
 emoji: 📧
 colorFrom: blue
 colorTo: green
@@ -78,3 +79,14 @@ python inference.py
 | categorize  | Qwen2.5-72B-Instruct   | ~0.95 |
 | prioritize  | Qwen2.5-72B-Instruct   | ~0.78 |
 | full_triage | Qwen2.5-72B-Instruct   | ~0.65 |
+=======
+emoji: 👀
+colorFrom: yellow
+colorTo: yellow
+sdk: docker
+pinned: false
+license: mit
+---
+
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+>>>>>>> 35f9ba432e55d124fa29973766fac7f6135b31b6
