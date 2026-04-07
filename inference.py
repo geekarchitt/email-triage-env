@@ -100,4 +100,4 @@ def run_task(task: str):
 if __name__ == "__main__":
     for task in TASKS:
         run_task(task)
-        print()  # blank line between tasks
+        print()  # blank line between tasks 
