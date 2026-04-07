@@ -1,10 +1,11 @@
 import os
+import sys
 import requests
 from openai import OpenAI
 
 # ── Config (judges inject API_BASE_URL and API_KEY) ───────────────────────────
-API_BASE_URL     = os.environ["API_BASE_URL"]
-API_KEY          = os.environ["API_KEY"]
+API_BASE_URL     = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY          = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy-key"))
 MODEL_NAME       = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 ENV_BASE_URL     = os.environ.get("ENV_BASE_URL", "https://archit072003-email-triage-env.hf.space")
 LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
@@ -12,7 +13,11 @@ LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
 TASKS = ["categorize", "prioritize", "full_triage"]
 MAX_STEPS = 1
 
-client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+try:
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+except Exception as e:
+    print(f"[DEBUG] OpenAI client init failed: {e}", flush=True)
+    sys.exit(1)
 
 # ── Logging (mandatory format) ────────────────────────────────────────────────
 
