@@ -12,11 +12,7 @@ LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
 TASKS = ["categorize", "prioritize", "full_triage"]
 MAX_STEPS = 1
 
-try:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-except Exception as e:
-    print(f"[DEBUG] OpenAI client init failed: {e}", flush=True)
-    client = None
+client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
 
 def log_start(task, env, model):
@@ -45,23 +41,15 @@ def get_agent_action(observation):
         '"priority": 1 to 5, '
         '"action": "reply" or "archive" or "delete" or "escalate"}'
     )
-
-    if client is None:
-        return {"category": "normal", "priority": 3, "action": "reply"}
-
-    try:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=100,
-            temperature=0.0,
-        )
-        text = completion.choices[0].message.content.strip()
-        text = text.replace("```json", "").replace("```", "").strip()
-        return json.loads(text)
-    except Exception as e:
-        print(f"[DEBUG] LLM call failed: {e}", flush=True)
-        return {"category": "normal", "priority": 3, "action": "reply"}
+    completion = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=100,
+        temperature=0.0,
+    )
+    text = completion.choices[0].message.content.strip()
+    text = text.replace("```json", "").replace("```", "").strip()
+    return json.loads(text)
 
 
 def run_task(task):
@@ -81,7 +69,12 @@ def run_task(task):
         return
 
     for step in range(1, MAX_STEPS + 1):
-        agent_action = get_agent_action(obs)
+        try:
+            agent_action = get_agent_action(obs)
+        except Exception as e:
+            log_step(step, "parse_error", 0.00, True, str(e))
+            log_end(False, step, 0.0, [0.0])
+            return
 
         payload = {
             "task": task,
