@@ -140,31 +140,33 @@ class EmailTriageEnv:
         breakdown = {}
         total = 0.0
 
-        # ── Task 1: categorize (worth 100% of score) ─────────────────────────
+    # Category score — never exactly 0 or 1
         cat_correct = action.category == email["correct_category"]
-        breakdown["category"] = 1.0 if cat_correct else 0.0
+        cat_score = 0.9 if cat_correct else 0.1
+        breakdown["category"] = cat_score
 
         if self.task == "categorize":
-            total = breakdown["category"]
+            total = cat_score
 
-        # ── Task 2: prioritize (category 50% + priority 50%) ─────────────────
         elif self.task == "prioritize":
             pri_diff = abs(action.priority - email["correct_priority"])
-            pri_score = max(0.0, 1.0 - (pri_diff * 0.25))  # -0.25 per level off
-            breakdown["priority"] = round(pri_score, 2)
-            total = (breakdown["category"] * 0.5) + (breakdown["priority"] * 0.5)
+            pri_score = max(0.1, min(0.9, round(0.9 - (pri_diff * 0.2), 2)))
+            breakdown["priority"] = pri_score
+            total = (cat_score * 0.5) + (pri_score * 0.5)
 
-        # ── Task 3: full_triage (category 40% + priority 30% + action 30%) ───
         elif self.task == "full_triage":
             pri_diff = abs(action.priority - email["correct_priority"])
-            pri_score = max(0.0, 1.0 - (pri_diff * 0.25))
+            pri_score = max(0.1, min(0.9, round(0.9 - (pri_diff * 0.2), 2)))
             act_correct = action.action == email["correct_action"]
-            breakdown["priority"] = round(pri_score, 2)
-            breakdown["action"] = 1.0 if act_correct else 0.0
+            act_score = 0.9 if act_correct else 0.1
+            breakdown["priority"] = pri_score
+            breakdown["action"] = act_score
             total = (
-                breakdown["category"] * 0.4 +
-                breakdown["priority"] * 0.3 +
-                breakdown["action"] * 0.3
+                cat_score * 0.4 +
+                pri_score * 0.3 +
+                act_score * 0.3
             )
 
-        return EmailReward(score=round(total, 2), breakdown=breakdown)
+    # Clamp to strictly (0, 1)
+        total = max(0.1, min(0.9, round(total, 2)))
+        return EmailReward(score=total, breakdown=breakdown)
