@@ -1,10 +1,10 @@
 import os
-import sys
 import json
 import requests
+from openai import OpenAI
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
-API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy-key"))
+API_BASE_URL = os.environ["API_BASE_URL"]
+API_KEY = os.environ["API_KEY"]
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://archit072003-email-triage-env.hf.space")
 LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
@@ -12,16 +12,11 @@ LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
 TASKS = ["categorize", "prioritize", "full_triage"]
 MAX_STEPS = 1
 
-# Ensure base URL ends with /v1
-if not API_BASE_URL.rstrip("/").endswith("/v1"):
-    API_BASE_URL = API_BASE_URL.rstrip("/") + "/v1"
-
 try:
-    from openai import OpenAI
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 except Exception as e:
     print(f"[DEBUG] OpenAI client init failed: {e}", flush=True)
-    client = None
+    raise
 
 
 def log_start(task, env, model):
@@ -30,8 +25,7 @@ def log_start(task, env, model):
 
 def log_step(step, action, reward, done, error=None):
     error_val = error if error else "null"
-    done_val = str(done).lower()
-    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
+    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_val}", flush=True)
 
 
 def log_end(success, steps, score, rewards):
@@ -40,21 +34,17 @@ def log_end(success, steps, score, rewards):
 
 
 def get_agent_action(observation):
-    if client is None:
-        return {"category": "normal", "priority": 3, "action": "reply"}
-
     prompt = (
         "You are an email triage agent. Read the email below and respond.\n\n"
         f"Subject: {observation['subject']}\n"
         f"From: {observation['sender']}\n"
         f"Body: {observation['body']}\n"
         f"Task: {observation['task']}\n\n"
-        "Respond with ONLY a JSON object like this (no explanation):\n"
+        "Respond with ONLY a JSON object (no explanation):\n"
         '{"category": "urgent" or "normal" or "spam", '
         '"priority": 1 to 5, '
         '"action": "reply" or "archive" or "delete" or "escalate"}'
     )
-
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
