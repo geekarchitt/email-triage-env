@@ -1,25 +1,19 @@
 import os
 import sys
+import json
 import requests
 from openai import OpenAI
 
-# ── Config (judges inject API_BASE_URL and API_KEY) ───────────────────────────
-API_BASE_URL     = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
-API_KEY          = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy-key"))
-MODEL_NAME       = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-ENV_BASE_URL     = os.environ.get("ENV_BASE_URL", "https://archit072003-email-triage-env.hf.space")
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy-key"))
+MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://archit072003-email-triage-env.hf.space")
 LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
 
 TASKS = ["categorize", "prioritize", "full_triage"]
 MAX_STEPS = 1
 
-try:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-except Exception as e:
-    print(f"[DEBUG] OpenAI client init failed: {e}", flush=True)
-    sys.exit(1)
-
-# ── Logging (mandatory format) ────────────────────────────────────────────────
+client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
 def log_start(task, env, model):
     print(f"[START] task={task} env={env} model={model}", flush=True)
@@ -32,8 +26,7 @@ def log_end(success, steps, score, rewards):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
-
-def get_agent_action(observation: dict) -> dict:
+def get_agent_action(observation):
     prompt = f"""You are an email triage agent. Read the email below and respond.
 
 Subject: {observation['subject']}
@@ -54,21 +47,21 @@ Respond with ONLY a JSON object like this (no explanation):
         max_tokens=100,
         temperature=0.0,
     )
-    import json
     text = completion.choices[0].message.content.strip()
-    # Strip markdown code fences if present
     text = text.replace("```json", "").replace("```", "").strip()
     return json.loads(text)
 
-# ── Run one task episode ──────────────────────────────────────────────────────
-
-def run_task(task: str):
+def run_task(task):
     log_start(task=task, env="email-triage-env", model=MODEL_NAME)
     rewards = []
 
-    # Reset
-    res = requests.post(f"{ENV_BASE_URL}/reset", json={"task": task})
-    obs = res.json()["observation"]
+    try:
+        res = requests.post(f"{ENV_BASE_URL}/reset", json={"task": task}, timeout=30)
+        obs = res.json()["observation"]
+    except Exception as e:
+        log_step(1, "reset_error", 0.00, True, str(e))
+        log_end(False, 1, 0.0, [0.0])
+        return
 
     for step in range(1, MAX_STEPS + 1):
         try:
@@ -78,18 +71,23 @@ def run_task(task: str):
             log_end(False, step, 0.0, [0.0])
             return
 
-        # Step
         payload = {
             "task": task,
             "category": agent_action.get("category", "normal"),
             "priority": agent_action.get("priority", 3),
             "action": agent_action.get("action", "reply")
         }
-        step_res = requests.post(f"{ENV_BASE_URL}/step", json=payload).json()
-        reward = step_res["reward"]
-        done = step_res["done"]
-        rewards.append(reward)
 
+        try:
+            step_res = requests.post(f"{ENV_BASE_URL}/step", json=payload, timeout=30).json()
+            reward = step_res["reward"]
+            done = step_res["done"]
+        except Exception as e:
+            log_step(step, "step_error", 0.00, True, str(e))
+            log_end(False, step, 0.0, [0.0])
+            return
+
+        rewards.append(reward)
         action_str = f"category={payload['category']},priority={payload['priority']},action={payload['action']}"
         log_step(step, action_str, reward, done)
 
@@ -100,9 +98,7 @@ def run_task(task: str):
     success = score >= 0.5
     log_end(success=success, steps=len(rewards), score=score, rewards=rewards)
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
     for task in TASKS:
         run_task(task)
-        print()  # blank line between tasks 
+        print()
