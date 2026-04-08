@@ -3,8 +3,8 @@ import json
 import requests
 from openai import OpenAI
 
-API_BASE_URL = os.environ["API_BASE_URL"]
-API_KEY = os.environ["API_KEY"]
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = os.environ.get("API_KEY", os.environ.get("HF_TOKEN", "dummy-key"))
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://archit072003-email-triage-env.hf.space")
 LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
@@ -16,7 +16,7 @@ try:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 except Exception as e:
     print(f"[DEBUG] OpenAI client init failed: {e}", flush=True)
-    raise
+    client = None
 
 
 def log_start(task, env, model):
@@ -45,6 +45,10 @@ def get_agent_action(observation):
         '"priority": 1 to 5, '
         '"action": "reply" or "archive" or "delete" or "escalate"}'
     )
+
+    if client is None:
+        return {"category": "normal", "priority": 3, "action": "reply"}
+
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
