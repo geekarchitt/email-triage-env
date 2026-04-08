@@ -1,26 +1,26 @@
 import random
-from typing import Optional
 from pydantic import BaseModel
+from typing import Optional
 
-# ── Typed Models (required by OpenEnv spec) ──────────────────────────────────
 
 class EmailObservation(BaseModel):
     email_id: str
     subject: str
     body: str
     sender: str
-    task: str  # which task is active: categorize / prioritize / full_triage
+    task: str
+
 
 class EmailAction(BaseModel):
-    category: str          # "urgent", "normal", "spam"
-    priority: int          # 1 (highest) to 5 (lowest)
-    action: str            # "reply", "archive", "delete", "escalate"
+    category: str
+    priority: int
+    action: str
+
 
 class EmailReward(BaseModel):
-    score: float           # 0.0 to 1.0
-    breakdown: dict        # shows partial scores
+    score: float
+    breakdown: dict
 
-# ── Sample Emails Dataset ─────────────────────────────────────────────────────
 
 EMAILS = [
     {
@@ -79,19 +79,16 @@ EMAILS = [
     },
 ]
 
-# ── The Environment Class ─────────────────────────────────────────────────────
 
 class EmailTriageEnv:
     def __init__(self, task: str = "categorize"):
-        assert task in ("categorize", "prioritize", "full_triage"), \
-            "task must be: categorize, prioritize, or full_triage"
+        assert task in ("categorize", "prioritize", "full_triage")
         self.task = task
         self.current_email = None
         self.done = False
         self.step_count = 0
 
     def reset(self) -> EmailObservation:
-        """Start a new episode with a random email."""
         self.current_email = random.choice(EMAILS)
         self.done = False
         self.step_count = 0
@@ -104,14 +101,11 @@ class EmailTriageEnv:
         )
 
     def step(self, action: EmailAction) -> dict:
-        """Agent submits a triage decision. Returns reward + next state."""
         if self.done:
             raise RuntimeError("Episode is done. Call reset() first.")
-
         reward_obj = self._grade(action)
-        self.done = True  # one email = one episode
+        self.done = True
         self.step_count += 1
-
         return {
             "observation": EmailObservation(
                 email_id=self.current_email["email_id"],
@@ -126,7 +120,6 @@ class EmailTriageEnv:
         }
 
     def state(self) -> dict:
-        """Returns current environment state."""
         return {
             "task": self.task,
             "step_count": self.step_count,
@@ -135,38 +128,33 @@ class EmailTriageEnv:
         }
 
     def _grade(self, action: EmailAction) -> EmailReward:
-        """Score the agent's action with partial credit."""
         email = self.current_email
         breakdown = {}
-        total = 0.0
 
-    # Category score — never exactly 0 or 1
         cat_correct = action.category == email["correct_category"]
-        cat_score = 0.9 if cat_correct else 0.1
-        breakdown["category"] = cat_score
+        cat_score = 0.85 if cat_correct else 0.15
 
         if self.task == "categorize":
             total = cat_score
 
         elif self.task == "prioritize":
             pri_diff = abs(action.priority - email["correct_priority"])
-            pri_score = max(0.1, min(0.9, round(0.9 - (pri_diff * 0.2), 2)))
+            pri_score = max(0.15, min(0.85, round(0.85 - (pri_diff * 0.15), 2)))
             breakdown["priority"] = pri_score
-            total = (cat_score * 0.5) + (pri_score * 0.5)
+            total = round((cat_score * 0.5) + (pri_score * 0.5), 2)
 
         elif self.task == "full_triage":
             pri_diff = abs(action.priority - email["correct_priority"])
-            pri_score = max(0.1, min(0.9, round(0.9 - (pri_diff * 0.2), 2)))
+            pri_score = max(0.15, min(0.85, round(0.85 - (pri_diff * 0.15), 2)))
             act_correct = action.action == email["correct_action"]
-            act_score = 0.9 if act_correct else 0.1
+            act_score = 0.85 if act_correct else 0.15
             breakdown["priority"] = pri_score
             breakdown["action"] = act_score
-            total = (
-                cat_score * 0.4 +
-                pri_score * 0.3 +
-                act_score * 0.3
-            )
+            total = round((cat_score * 0.4) + (pri_score * 0.3) + (act_score * 0.3), 2)
 
-    # Clamp to strictly (0, 1)
-        total = max(0.1, min(0.9, round(total, 2)))
+        else:
+            total = 0.5
+
+        breakdown["category"] = cat_score
+        total = max(0.15, min(0.85, total))
         return EmailReward(score=total, breakdown=breakdown)

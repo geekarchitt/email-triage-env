@@ -5,13 +5,12 @@ from email_triage_env import EmailTriageEnv, EmailAction
 
 app = FastAPI(title="Email Triage OpenEnv")
 
-# One env instance per task — stored in memory
-envs: dict[str, EmailTriageEnv] = {}
+envs = {}
 
-# ── Request/Response Models ───────────────────────────────────────────────────
 
 class ResetRequest(BaseModel):
-    task: Optional[str] = "categorize"  # default task
+    task: Optional[str] = "categorize"
+
 
 class StepRequest(BaseModel):
     task: str
@@ -19,7 +18,6 @@ class StepRequest(BaseModel):
     priority: int
     action: str
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.post("/reset")
 def reset(req: ResetRequest = None):
@@ -34,17 +32,15 @@ def reset(req: ResetRequest = None):
     obs = env.reset()
     return {"observation": obs.model_dump(), "done": False}
 
+
 @app.post("/step")
 def step(req: StepRequest):
-    """Submit an action. Returns reward, observation, done."""
     task = req.task
     if task not in envs:
         raise HTTPException(status_code=400, detail="Call /reset first")
-    
     env = envs[task]
     if env.done:
         raise HTTPException(status_code=400, detail="Episode done. Call /reset again.")
-    
     action = EmailAction(
         category=req.category,
         priority=req.priority,
@@ -58,14 +54,14 @@ def step(req: StepRequest):
         "info": result["info"]
     }
 
+
 @app.get("/state")
 def state(task: str = "categorize"):
-    """Returns the current state of the environment."""
     if task not in envs:
         raise HTTPException(status_code=400, detail="Call /reset first")
     return envs[task].state()
 
+
 @app.get("/health")
 def health():
-    """Simple health check."""
     return {"status": "ok"}
