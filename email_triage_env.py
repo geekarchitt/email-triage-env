@@ -15,6 +15,8 @@ class EmailAction(BaseModel):
     category: str
     priority: int
     action: str
+    sender_type: str = "internal"
+    reply_subject: str = ""
 
 
 class EmailReward(BaseModel):
@@ -30,7 +32,9 @@ EMAILS = [
         "sender": "ops-team@company.com",
         "correct_category": "urgent",
         "correct_priority": 1,
-        "correct_action": "escalate"
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: URGENT: Server is down in production"
     },
     {
         "email_id": "e002",
@@ -39,7 +43,9 @@ EMAILS = [
         "sender": "noreply@totallylegit.xyz",
         "correct_category": "spam",
         "correct_priority": 5,
-        "correct_action": "delete"
+        "correct_action": "delete",
+        "correct_sender_type": "external",
+        "correct_reply_subject": ""
     },
     {
         "email_id": "e003",
@@ -48,7 +54,9 @@ EMAILS = [
         "sender": "finance@company.com",
         "correct_category": "normal",
         "correct_priority": 3,
-        "correct_action": "reply"
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Q3 report ready for review"
     },
     {
         "email_id": "e004",
@@ -57,7 +65,9 @@ EMAILS = [
         "sender": "colleague@company.com",
         "correct_category": "normal",
         "correct_priority": 2,
-        "correct_action": "reply"
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Meeting tomorrow"
     },
     {
         "email_id": "e005",
@@ -66,7 +76,9 @@ EMAILS = [
         "sender": "security@company.com",
         "correct_category": "urgent",
         "correct_priority": 1,
-        "correct_action": "escalate"
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Security breach detected"
     },
     {
         "email_id": "e006",
@@ -75,14 +87,173 @@ EMAILS = [
         "sender": "newsletter@productivity.io",
         "correct_category": "spam",
         "correct_priority": 5,
-        "correct_action": "archive"
+        "correct_action": "archive",
+        "correct_sender_type": "external",
+        "correct_reply_subject": ""
+    },
+    {
+        "email_id": "e007",
+        "subject": "Invoice #4521 overdue",
+        "body": "Your invoice #4521 for $2,400 is 30 days overdue. Please make payment immediately.",
+        "sender": "billing@vendor.com",
+        "correct_category": "urgent",
+        "correct_priority": 2,
+        "correct_action": "escalate",
+        "correct_sender_type": "external",
+        "correct_reply_subject": "Re: Invoice #4521 overdue"
+    },
+    {
+        "email_id": "e008",
+        "subject": "Welcome to the team!",
+        "body": "Hi! I just joined the engineering team. Looking forward to working with everyone.",
+        "sender": "newjoin@company.com",
+        "correct_category": "normal",
+        "correct_priority": 4,
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Welcome to the team!"
+    },
+    {
+        "email_id": "e009",
+        "subject": "FREE iPhone 15 - Limited offer",
+        "body": "You have been selected to receive a FREE iPhone 15! Click now!",
+        "sender": "promo@freeiphonez.net",
+        "correct_category": "spam",
+        "correct_priority": 5,
+        "correct_action": "delete",
+        "correct_sender_type": "external",
+        "correct_reply_subject": ""
+    },
+    {
+        "email_id": "e010",
+        "subject": "Database backup failed",
+        "body": "Automated backup for production database failed at 03:00 AM. Manual intervention required.",
+        "sender": "alerts@company.com",
+        "correct_category": "urgent",
+        "correct_priority": 1,
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Database backup failed"
+    },
+    {
+        "email_id": "e011",
+        "subject": "Feedback on your presentation",
+        "body": "Great job on the presentation yesterday. The client was very impressed with the demo.",
+        "sender": "manager@company.com",
+        "correct_category": "normal",
+        "correct_priority": 3,
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Feedback on your presentation"
+    },
+    {
+        "email_id": "e012",
+        "subject": "Your account password has been reset",
+        "body": "Your password was reset from IP 192.168.1.1. If this was not you, contact support immediately.",
+        "sender": "no-reply@company.com",
+        "correct_category": "urgent",
+        "correct_priority": 1,
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Your account password has been reset"
+    },
+    {
+        "email_id": "e013",
+        "subject": "Team lunch this Friday",
+        "body": "We are organizing a team lunch this Friday at 1pm. Please confirm your attendance.",
+        "sender": "hr@company.com",
+        "correct_category": "normal",
+        "correct_priority": 4,
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Team lunch this Friday"
+    },
+    {
+        "email_id": "e014",
+        "subject": "Exclusive deal just for you!",
+        "body": "Save 90% on all products today only. Use code SAVE90 at checkout.",
+        "sender": "deals@shopnow.biz",
+        "correct_category": "spam",
+        "correct_priority": 5,
+        "correct_action": "delete",
+        "correct_sender_type": "external",
+        "correct_reply_subject": ""
+    },
+    {
+        "email_id": "e015",
+        "subject": "Client contract renewal due",
+        "body": "The contract with Acme Corp is due for renewal on the 15th. Please review and sign.",
+        "sender": "legal@company.com",
+        "correct_category": "normal",
+        "correct_priority": 2,
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Client contract renewal due"
+    },
+    {
+        "email_id": "e016",
+        "subject": "API rate limit exceeded",
+        "body": "Your application has exceeded the API rate limit. Service is degraded for all users.",
+        "sender": "alerts@company.com",
+        "correct_category": "urgent",
+        "correct_priority": 1,
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: API rate limit exceeded"
+    },
+    {
+        "email_id": "e017",
+        "subject": "Request for project update",
+        "body": "Could you please send me the latest update on the mobile app project? Thanks.",
+        "sender": "stakeholder@client.com",
+        "correct_category": "normal",
+        "correct_priority": 2,
+        "correct_action": "reply",
+        "correct_sender_type": "external",
+        "correct_reply_subject": "Re: Request for project update"
+    },
+    {
+        "email_id": "e018",
+        "subject": "You have won a lottery!",
+        "body": "Congratulations! You are our lucky winner. Send us your bank details to claim your prize.",
+        "sender": "lottery@winner-notify.com",
+        "correct_category": "spam",
+        "correct_priority": 5,
+        "correct_action": "delete",
+        "correct_sender_type": "external",
+        "correct_reply_subject": ""
+    },
+    {
+        "email_id": "e019",
+        "subject": "Office closed on Monday",
+        "body": "Please note the office will be closed on Monday for a public holiday.",
+        "sender": "admin@company.com",
+        "correct_category": "normal",
+        "correct_priority": 4,
+        "correct_action": "archive",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": ""
+    },
+    {
+        "email_id": "e020",
+        "subject": "Critical vulnerability in production code",
+        "body": "A critical security vulnerability has been found in our payment module. Immediate patch required.",
+        "sender": "security@company.com",
+        "correct_category": "urgent",
+        "correct_priority": 1,
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Critical vulnerability in production code"
     },
 ]
 
 
 class EmailTriageEnv:
     def __init__(self, task: str = "categorize"):
-        assert task in ("categorize", "prioritize", "full_triage")
+        assert task in (
+            "categorize", "prioritize", "full_triage",
+            "sender_analysis", "reply_drafting"
+        ), "Invalid task name"
         self.task = task
         self.current_email = None
         self.done = False
@@ -131,26 +302,60 @@ class EmailTriageEnv:
         email = self.current_email
         breakdown = {}
 
+        # Category score
         cat_correct = action.category == email["correct_category"]
         cat_score = 0.85 if cat_correct else 0.15
+
+        # Priority score — partial credit based on distance
+        pri_diff = abs(action.priority - email["correct_priority"])
+        pri_score = max(0.15, min(0.85, round(0.85 - (pri_diff * 0.15), 2)))
+
+        # Action score
+        act_correct = action.action == email["correct_action"]
+        act_score = 0.85 if act_correct else 0.15
+
+        # Sender type score
+        sender_correct = action.sender_type == email["correct_sender_type"]
+        sender_score = 0.85 if sender_correct else 0.15
+
+        # Reply subject score — partial credit for containing key words
+        correct_subj = email["correct_reply_subject"].lower()
+        agent_subj = action.reply_subject.lower()
+        if correct_subj == "":
+            reply_score = 0.85 if agent_subj == "" else 0.15
+        elif agent_subj == "":
+            reply_score = 0.15
+        elif "re:" in agent_subj and any(
+            word in agent_subj for word in correct_subj.split() if len(word) > 3
+        ):
+            reply_score = 0.85
+        else:
+            reply_score = 0.45
 
         if self.task == "categorize":
             total = cat_score
 
         elif self.task == "prioritize":
-            pri_diff = abs(action.priority - email["correct_priority"])
-            pri_score = max(0.15, min(0.85, round(0.85 - (pri_diff * 0.15), 2)))
             breakdown["priority"] = pri_score
             total = round((cat_score * 0.5) + (pri_score * 0.5), 2)
 
         elif self.task == "full_triage":
-            pri_diff = abs(action.priority - email["correct_priority"])
-            pri_score = max(0.15, min(0.85, round(0.85 - (pri_diff * 0.15), 2)))
-            act_correct = action.action == email["correct_action"]
-            act_score = 0.85 if act_correct else 0.15
             breakdown["priority"] = pri_score
             breakdown["action"] = act_score
-            total = round((cat_score * 0.4) + (pri_score * 0.3) + (act_score * 0.3), 2)
+            total = round(
+                (cat_score * 0.4) +
+                (pri_score * 0.3) +
+                (act_score * 0.3),
+                2
+            )
+
+        elif self.task == "sender_analysis":
+            breakdown["sender_type"] = sender_score
+            total = round((cat_score * 0.5) + (sender_score * 0.5), 2)
+
+        elif self.task == "reply_drafting":
+            breakdown["reply_subject"] = reply_score
+            total = round((cat_score * 0.4) + (pri_score * 0.3) + (reply_score * 0.3), 2)
 
         else:
             total = 0.5

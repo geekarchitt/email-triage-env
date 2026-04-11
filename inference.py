@@ -17,7 +17,7 @@ client = OpenAI(
     api_key=HF_TOKEN
 )
 
-TASKS = ["categorize", "prioritize", "full_triage"]
+TASKS = ["categorize", "prioritize", "full_triage", "sender_analysis", "reply_drafting"]
 MAX_STEPS = 1
 
 
@@ -45,12 +45,14 @@ def get_agent_action(observation):
         "Respond with ONLY a JSON object (no explanation):\n"
         '{"category": "urgent" or "normal" or "spam", '
         '"priority": 1 to 5, '
-        '"action": "reply" or "archive" or "delete" or "escalate"}'
+        '"action": "reply" or "archive" or "delete" or "escalate", '
+        '"sender_type": "internal" or "external" or "unknown", '
+        '"reply_subject": "Re: subject line or empty string if spam"}'
     )
     completion = client.chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=100,
+        max_tokens=150,
         temperature=0.0,
     )
     text = completion.choices[0].message.content.strip()

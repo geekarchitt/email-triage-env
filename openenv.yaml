@@ -2,7 +2,7 @@ name: email-triage-env
 version: "1.0.0"
 description: >
   An OpenEnv environment where an AI agent triages emails by categorizing,
-  prioritizing, and deciding the correct action for each email.
+  prioritizing, analyzing senders, and drafting replies.
 tasks:
   - name: categorize
     difficulty: easy
@@ -12,7 +12,13 @@ tasks:
     description: Classify the email and assign a priority from 1 (highest) to 5 (lowest).
   - name: full_triage
     difficulty: hard
-    description: Classify, prioritize, and decide the correct action (reply/archive/delete/escalate).
+    description: Classify, prioritize, and decide the correct action.
+  - name: sender_analysis
+    difficulty: medium
+    description: Classify the email and identify if sender is internal or external.
+  - name: reply_drafting
+    difficulty: hard
+    description: Classify, prioritize, and draft an appropriate reply subject line.
 observation_space:
   email_id: string
   subject: string
@@ -23,7 +29,9 @@ action_space:
   category: "urgent | normal | spam"
   priority: "integer 1-5"
   action: "reply | archive | delete | escalate"
-reward_range: [0.0, 1.0]
+  sender_type: "internal | external | unknown"
+  reply_subject: "string"
+reward_range: [0.15, 0.85]
 api:
   reset: POST /reset
   step: POST /step
