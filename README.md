@@ -20,6 +20,10 @@ Email triage is a task every knowledge worker does daily. Training agents
 to handle it well has immediate real-world value for productivity tools,
 enterprise automation, and AI assistants.
 
+## 🖼️ Live API Preview
+
+![API Docs](docs_screenshot.png)
+
 ## 📐 Observation Space
 
 | Field    | Type   | Description                     |
