@@ -9,7 +9,7 @@ tasks:
     description: Classify the email as urgent, normal, or spam.
   - name: prioritize
     difficulty: medium
-    description: Classify the email and assign a priority from 1 (highest) to 5 (lowest).
+    description: Classify the email and assign a priority from 1 to 5.
   - name: full_triage
     difficulty: hard
     description: Classify, prioritize, and decide the correct action.
@@ -36,3 +36,4 @@ api:
   reset: POST /reset
   step: POST /step
   state: GET /state
+  episode_summary: GET /episode_summary
