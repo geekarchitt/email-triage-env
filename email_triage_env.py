@@ -1,6 +1,6 @@
 import random
 from pydantic import BaseModel
-from typing import Optional
+from typing import List
 
 
 class EmailObservation(BaseModel):
@@ -9,6 +9,8 @@ class EmailObservation(BaseModel):
     body: str
     sender: str
     task: str
+    inbox_position: int = 1
+    inbox_size: int = 1
 
 
 class EmailAction(BaseModel):
@@ -245,7 +247,70 @@ EMAILS = [
         "correct_sender_type": "internal",
         "correct_reply_subject": "Re: Critical vulnerability in production code"
     },
+    {
+        "email_id": "e021",
+        "subject": "Disk space critical on prod server",
+        "body": "Production server disk usage is at 95%. Immediate cleanup required to prevent outage.",
+        "sender": "monitoring@company.com",
+        "correct_category": "urgent",
+        "correct_priority": 1,
+        "correct_action": "escalate",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Disk space critical on prod server"
+    },
+    {
+        "email_id": "e022",
+        "subject": "Interview scheduled for Monday",
+        "body": "Your interview for the Senior Engineer role is scheduled for Monday 10am. Please confirm.",
+        "sender": "hr@company.com",
+        "correct_category": "normal",
+        "correct_priority": 2,
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Interview scheduled for Monday"
+    },
+    {
+        "email_id": "e023",
+        "subject": "Make money fast working from home",
+        "body": "Earn $5000 per week working just 2 hours a day! No experience needed. Click to start.",
+        "sender": "jobs@easymoney4u.net",
+        "correct_category": "spam",
+        "correct_priority": 5,
+        "correct_action": "delete",
+        "correct_sender_type": "external",
+        "correct_reply_subject": ""
+    },
+    {
+        "email_id": "e024",
+        "subject": "Budget approval needed urgently",
+        "body": "The Q4 budget proposal needs your approval by EOD today for the finance team to proceed.",
+        "sender": "cfo@company.com",
+        "correct_category": "urgent",
+        "correct_priority": 1,
+        "correct_action": "reply",
+        "correct_sender_type": "internal",
+        "correct_reply_subject": "Re: Budget approval needed urgently"
+    },
+    {
+        "email_id": "e025",
+        "subject": "Your subscription is expiring",
+        "body": "Your annual software subscription expires in 7 days. Renew now to avoid interruption.",
+        "sender": "billing@softwaretool.com",
+        "correct_category": "normal",
+        "correct_priority": 3,
+        "correct_action": "reply",
+        "correct_sender_type": "external",
+        "correct_reply_subject": "Re: Your subscription is expiring"
+    },
 ]
+
+INBOX_SIZES = {
+    "categorize": 1,
+    "prioritize": 1,
+    "full_triage": 3,
+    "sender_analysis": 2,
+    "reply_drafting": 3,
+}
 
 
 class EmailTriageEnv:
@@ -255,39 +320,65 @@ class EmailTriageEnv:
             "sender_analysis", "reply_drafting"
         ), "Invalid task name"
         self.task = task
-        self.current_email = None
+        self.inbox = []
+        self.current_index = 0
         self.done = False
         self.step_count = 0
+        self.episode_rewards = []
 
     def reset(self) -> EmailObservation:
-        self.current_email = random.choice(EMAILS)
+        inbox_size = INBOX_SIZES.get(self.task, 1)
+        self.inbox = random.sample(EMAILS, min(inbox_size, len(EMAILS)))
+        self.current_index = 0
         self.done = False
         self.step_count = 0
+        self.episode_rewards = []
+        return self._make_observation()
+
+    def _make_observation(self) -> EmailObservation:
+        email = self.inbox[self.current_index]
         return EmailObservation(
-            email_id=self.current_email["email_id"],
-            subject=self.current_email["subject"],
-            body=self.current_email["body"],
-            sender=self.current_email["sender"],
-            task=self.task
+            email_id=email["email_id"],
+            subject=email["subject"],
+            body=email["body"],
+            sender=email["sender"],
+            task=self.task,
+            inbox_position=self.current_index + 1,
+            inbox_size=len(self.inbox)
         )
 
     def step(self, action: EmailAction) -> dict:
         if self.done:
             raise RuntimeError("Episode is done. Call reset() first.")
+
         reward_obj = self._grade(action)
-        self.done = True
+        self.episode_rewards.append(reward_obj.score)
         self.step_count += 1
+        self.current_index += 1
+
+        if self.current_index >= len(self.inbox):
+            self.done = True
+
+        next_obs = self._make_observation() if not self.done else EmailObservation(
+            email_id="done",
+            subject="",
+            body="",
+            sender="",
+            task=self.task,
+            inbox_position=len(self.inbox),
+            inbox_size=len(self.inbox)
+        )
+
         return {
-            "observation": EmailObservation(
-                email_id=self.current_email["email_id"],
-                subject=self.current_email["subject"],
-                body=self.current_email["body"],
-                sender=self.current_email["sender"],
-                task=self.task
-            ),
+            "observation": next_obs,
             "reward": reward_obj.score,
             "done": self.done,
-            "info": {"breakdown": reward_obj.breakdown}
+            "info": {
+                "breakdown": reward_obj.breakdown,
+                "episode_avg": round(
+                    sum(self.episode_rewards) / len(self.episode_rewards), 3
+                )
+            }
         }
 
     def state(self) -> dict:
@@ -295,30 +386,27 @@ class EmailTriageEnv:
             "task": self.task,
             "step_count": self.step_count,
             "done": self.done,
-            "current_email_id": self.current_email["email_id"] if self.current_email else None
+            "inbox_size": len(self.inbox),
+            "current_index": self.current_index,
+            "episode_rewards": self.episode_rewards
         }
 
     def _grade(self, action: EmailAction) -> EmailReward:
-        email = self.current_email
+        email = self.inbox[self.current_index]
         breakdown = {}
 
-        # Category score
         cat_correct = action.category == email["correct_category"]
         cat_score = 0.85 if cat_correct else 0.15
 
-        # Priority score — partial credit based on distance
         pri_diff = abs(action.priority - email["correct_priority"])
         pri_score = max(0.15, min(0.85, round(0.85 - (pri_diff * 0.15), 2)))
 
-        # Action score
         act_correct = action.action == email["correct_action"]
         act_score = 0.85 if act_correct else 0.15
 
-        # Sender type score
         sender_correct = action.sender_type == email["correct_sender_type"]
         sender_score = 0.85 if sender_correct else 0.15
 
-        # Reply subject score — partial credit for containing key words
         correct_subj = email["correct_reply_subject"].lower()
         agent_subj = action.reply_subject.lower()
         if correct_subj == "":
@@ -334,29 +422,23 @@ class EmailTriageEnv:
 
         if self.task == "categorize":
             total = cat_score
-
         elif self.task == "prioritize":
             breakdown["priority"] = pri_score
             total = round((cat_score * 0.5) + (pri_score * 0.5), 2)
-
         elif self.task == "full_triage":
             breakdown["priority"] = pri_score
             breakdown["action"] = act_score
             total = round(
-                (cat_score * 0.4) +
-                (pri_score * 0.3) +
-                (act_score * 0.3),
-                2
+                (cat_score * 0.4) + (pri_score * 0.3) + (act_score * 0.3), 2
             )
-
         elif self.task == "sender_analysis":
             breakdown["sender_type"] = sender_score
             total = round((cat_score * 0.5) + (sender_score * 0.5), 2)
-
         elif self.task == "reply_drafting":
             breakdown["reply_subject"] = reply_score
-            total = round((cat_score * 0.4) + (pri_score * 0.3) + (reply_score * 0.3), 2)
-
+            total = round(
+                (cat_score * 0.4) + (pri_score * 0.3) + (reply_score * 0.3), 2
+            )
         else:
             total = 0.5
 

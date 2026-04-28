@@ -18,7 +18,7 @@ client = OpenAI(
 )
 
 TASKS = ["categorize", "prioritize", "full_triage", "sender_analysis", "reply_drafting"]
-MAX_STEPS = 1
+MAX_STEPS = 5
 
 
 def log_start(task, env, model):
